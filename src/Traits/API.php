@@ -15,7 +15,7 @@ trait API
         try {
             $client = new Client(['timeout' => 30]);
 
-            $response = $client->post($url . '/api/v2/sms', [
+            $response = $client->post($url . '/api/v5/send', [
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $token,
