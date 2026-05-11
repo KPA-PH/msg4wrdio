@@ -4,76 +4,61 @@ namespace KPAPH\MSG4wrdIO\Traits;
 
 use Exception;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
-use Guzzle\Http\Exception\BadResponseException;
-use Guzzle\Http\Exception\ClientErrorResponseException;
-use Guzzle\Http\Exception\ServerErrorResponseException;
 
 trait API
 {
-    public static function PostAPI($data)
+    public static function PostAPI(array $data): array
     {
-        $version = (int)phpversion();
-
-        if( $version < 8 ) {
-            return self::postRequestPHPCurl($data);
-        }
-
-        return self::postRequestGuzzleHttp($data);
-    }
-
-    public static function postRequestGuzzleHttp($data)
-    {
-        $client = new Client();
-        $errMessage = "Sending failed.";
-
-        $url = config('msg4wrdio.domain');
-        $token = config('msg4wrdio.token');
-
-        $headers = [
-            'Content-Type' => 'application/json',
-            'Authorization' => ' Bearer ' . $token,
-        ];
+        $url = rtrim((string) self::resolveBaseUrl(), '/');
+        $token = (string) config('msg4wrdio.token');
 
         try {
-            $postResponse = $client->post($url . '/api/v2/sms', [
-                'headers' => $headers,
+            $client = new Client(['timeout' => 30]);
+
+            $response = $client->post($url . '/api/v2/sms', [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $token,
+                ],
                 'json' => $data,
+                'http_errors' => false,
             ]);
 
-            if ($postResponse->getStatusCode() == 200) {
-                return json_decode($postResponse->getBody(), true);
-            }
-        } catch (Exception $e) {
-            $errMessage = $e->getMessage();
-        }
+            $status = $response->getStatusCode();
+            $body = json_decode((string) $response->getBody(), true);
 
-        return [
-            'status' => 500,
-            'message' => $errMessage
-        ];
+            if ($status >= 200 && $status < 300) {
+                return is_array($body) ? $body : ['status' => $status, 'message' => 'OK'];
+            }
+
+            return [
+                'status' => $status,
+                'message' => is_array($body) && isset($body['message']) ? $body['message'] : 'Request failed',
+                'body' => $body,
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 500,
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 
-    public static function postRequestPHPCurl($data)
+    /**
+     * Pick the base URL based on dev_mode: true → sandbox, false → live.
+     * Falls back to the live URL if the resolved entry is empty.
+     */
+    protected static function resolveBaseUrl(): string
     {
-        $ch = curl_init();
+        $devMode = filter_var(config('msg4wrdio.dev_mode', false), FILTER_VALIDATE_BOOLEAN);
+        $key = $devMode ? 'sandbox' : 'live';
 
-        $url = config('msg4wrdio.domain');
-        $token = config('msg4wrdio.token');
+        $url = (string) config('msg4wrdio.' . $key);
 
-        $headers = array(
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $token
-        );
+        if ($url === '') {
+            $url = (string) config('msg4wrdio.live', 'https://api.msg4wrd.io');
+        }
 
-        $postdata = json_encode($data);
-        curl_setopt($ch, CURLOPT_URL, $url . '/api/v2/sms');
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $output = curl_exec($ch);
-        curl_close($ch);
-        return json_decode($output, true);
+        return $url;
     }
 }
