@@ -17,7 +17,7 @@ If you are smart, you will use SMART Gateway, identical to the other networks.
 ## Requirements
 
 - PHP `^8.1`
-- Laravel `8.x` – `12.x`
+- Laravel `8.x` – `13.x`
 
 ## Installation
 
@@ -115,6 +115,11 @@ class SMSController extends Controller
 
 ## Changelog
 
+### v2026.7.1 — Laravel 13 support
+
+- **Laravel 13 support.** `illuminate/support` now allows `^13.0`, so the package installs cleanly on Laravel 13. Verified against `laravel/framework v13.18.1` on PHP 8.4. Existing Laravel 8–12 apps are unaffected.
+- **No code or config changes.** This is a dependency-constraint-only release — nothing in your app needs to change. Just bump to `v2026.7.1` (see [Upgrading](#upgrading)).
+
 ### Fixes
 
 - **Country option now actually works.** `checkCountry()` was comparing the `Country` int-backed enum to the string `"US"`, so `Country::US` silently fell through to `Country::PH`. The helper now accepts a `Country` enum, an int matching the enum value, or the string `"US"`/`"PH"`.
@@ -134,12 +139,18 @@ class SMSController extends Controller
 ### Packaging
 
 - **Package auto-discovery.** Added `extra.laravel.providers` to `composer.json`. You no longer need to manually add `MSG4wrdIOServiceProvider::class` to `config/app.php`.
-- **Explicit constraints.** `composer.json` now declares `php: ^8.1` and `illuminate/support: ^8.0|^9.0|^10.0|^11.0|^12.0`, so Composer can resolve the right Laravel version on install.
+- **Explicit constraints.** `composer.json` now declares `php: ^8.1` and `illuminate/support: ^8.0|^9.0|^10.0|^11.0|^12.0|^13.0`, so Composer can resolve the right Laravel version on install.
 - Switched `minimum-stability` to `stable` with `prefer-stable: true`.
 
 ### Upgrading
 
-If you are upgrading from an earlier version:
+**Upgrading to Laravel 13?** Just update the package — no app changes needed:
+
+```
+composer require kpaph/msg4wrdio:^2026.7
+```
+
+If you are upgrading from a much earlier version:
 
 1. Remove the manual `KPAPH\MSG4wrdIO\MSG4wrdIOServiceProvider::class` entry from `config/app.php` — auto-discovery handles it now.
 2. If you relied on the `/msg4wrd*` demo routes, add `MSG4wrdIO_EXPOSE_DEMO_ROUTES=true` to your `.env` (recommended: local environments only).
